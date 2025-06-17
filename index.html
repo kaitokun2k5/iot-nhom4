@@ -1,72 +1,21 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
+  <title>Điều khiển Đèn với Firebase</title>
   <meta charset="UTF-8">
-  <title>Điều khiển Đèn ESP32</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f2f2f2;
-      text-align: center;
-      padding-top: 100px;
-    }
-
-    h1 {
-      color: #333;
-      margin-bottom: 40px;
-    }
-
-    .btn {
-      font-size: 18px;
-      padding: 12px 30px;
-      margin: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s ease, transform 0.2s ease;
-    }
-
-    .btn-on {
-      background-color: #28a745;
-      color: white;
-    }
-
-    .btn-on:hover {
-      background-color: #218838;
-      transform: scale(1.05);
-    }
-
-    .btn-off {
-      background-color: #dc3545;
-      color: white;
-    }
-
-    .btn-off:hover {
-      background-color: #c82333;
-      transform: scale(1.05);
-    }
-
-    .status {
-      margin-top: 30px;
-      font-size: 20px;
-      color: #555;
-    }
-  </style>
 </head>
 <body>
-  <h1>Điều khiển Đèn ESP32</h1>
-
-  <button class="btn btn-on" onclick="controlLed(true)">💡 Bật đèn</button>
-  <button class="btn btn-off" onclick="controlLed(false)">💤 Tắt đèn</button>
-
-  <div class="status" id="statusText">Trạng thái: Chưa cập nhật</div>
+  <h1>Điều khiển Đèn (ESP32)</h1>
+  <button onclick="controlLed(true)">Bật đèn</button>
+  <button onclick="controlLed(false)">Tắt đèn</button>
 
   <script>
+    // Thay bằng URL Firebase Realtime Database của bạn
     const databaseURL = "https://iot-nhom-4-1bad5-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
     function controlLed(state) {
-      fetch(`${databaseURL}/led.json`, {
-        method: "PUT",
+      fetch(${databaseURL}/led.json, {
+        method: "PUT", // hoặc PATCH
         headers: {
           "Content-Type": "application/json"
         },
@@ -74,14 +23,13 @@
       })
       .then(response => {
         if (response.ok) {
-          document.getElementById("statusText").textContent = "Trạng thái: " + (state ? "Đèn đang BẬT" : "Đèn đã TẮT");
+          alert(state ? "Đã bật đèn" : "Đã tắt đèn");
         } else {
-          document.getElementById("statusText").textContent = "Trạng thái: Gửi yêu cầu thất bại.";
+          alert("Lỗi khi gửi yêu cầu");
         }
       })
       .catch(error => {
         console.error("Lỗi:", error);
-        document.getElementById("statusText").textContent = "Trạng thái: Lỗi kết nối.";
       });
     }
   </script>
