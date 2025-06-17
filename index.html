@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Điều khiển Đèn với Firebase</title>
+  <title>Điều khiển Đèn </title>
   <meta charset="UTF-8">
 </head>
 <body>
@@ -22,8 +22,10 @@
         body: JSON.stringify(state)
       })
       .then(response => {
-        if (!response.ok) {
-          console.error("Lỗi khi gửi yêu cầu");
+        if (response.ok) {
+          alert(state ? "Đã bật đèn" : "Đã tắt đèn");
+        } else {
+          alert("Lỗi khi gửi yêu cầu");
         }
       })
       .catch(error => {
@@ -33,4 +35,3 @@
   </script>
 </body>
 </html>
-
