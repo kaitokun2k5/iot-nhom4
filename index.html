@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Team Control Panel - Firebase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s infinite ease-in-out;
+        }
+
+        .particle:nth-child(1) { width: 4px; height: 4px; left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { width: 6px; height: 6px; left: 20%; animation-delay: 1s; }
+        .particle:nth-child(3) { width: 3px; height: 3px; left: 30%; animation-delay: 2s; }
+        .particle:nth-child(4) { width: 5px; height: 5px; left: 40%; animation-delay: 3s; }
+        .particle:nth-child(5) { width: 4px; height: 4px; left: 50%; animation-delay: 4s; }
+        .particle:nth-child(6) { width: 6px; height: 6px; left: 60%; animation-delay: 5s; }
+        .particle:nth-child(7) { width: 3px; height: 3px; left: 70%; animation-delay: 1.5s; }
+        .particle:nth-child(8) { width: 5px; height: 5px; left: 80%; animation-delay: 2.5s; }
+        .particle:nth-child(9) { width: 4px; height: 4px; left: 90%; animation-delay: 3.5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.2); }
+            to { text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 30px rgba(255,255,255,0.4); }
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .team-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .team-title {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #4a5568;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .team-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .member-card {
+            background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .member-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .member-card:hover::before {
+            left: 100%;
+        }
+
+        .member-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .member-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .member-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .member-role {
+            color: #718096;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .member-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .skill-tag {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .control-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-title {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #4a5568;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .control-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            border-radius: 2px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .gpio-control {
+            background: linear-gradient(145deg, #f7fafc, #edf2f7);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .gpio-control:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .gpio-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .gpio-status {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .status-on {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            color: white;
+        }
+
+        .status-off {
+            background: linear-gradient(45deg, #f56565, #e53e3e);
+            color: white;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-on {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+            color: white;
+        }
+
+        .btn-on:hover {
+            background: linear-gradient(45deg, #38a169, #2f855a);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-off {
+            background: linear-gradient(45deg, #f56565, #e53e3e);
+            color: white;
+        }
+
+        .btn-off:hover {
+            background: linear-gradient(45deg, #e53e3e, #c53030);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 101, 101, 0.3);
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .status-indicator.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .team-grid { grid-template-columns: 1fr; }
+            .control-grid { grid-template-columns: 1fr; }
+            .control-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🚀 ESP32 TEAM CONTROL PANEL</h1>
+            <p class="subtitle">Điều khiển thông minh với Firebase & IoT</p>
+        </div>
+
+        <div class="team-section">
+            <h2 class="team-title">👥 TEAM MEMBERS</h2>
+            <div class="team-grid">
+                <div class="member-card">
+                    <div class="member-avatar">A</div>
+                    <div class="member-name">Nguyễn Văn An</div>
+                    <div class="member-role">Team Leader & Hardware Engineer</div>
+                    <div class="member-skills">
+                        <span class="skill-tag">ESP32</span>
+                        <span class="skill-tag">IoT</span>
+                        <span class="skill-tag">Arduino</span>
+                    </div>
+                </div>
+                
+                <div class="member-card">
+                    <div class="member-avatar">B</div>
+                    <div class="member-name">Trần Thị Bình</div>
+                    <div class="member-role">Frontend Developer</div>
+                    <div class="member-skills">
+                        <span class="skill-tag">HTML/CSS</span>
+                        <span class="skill-tag">JavaScript</span>
+                        <span class="skill-tag">UI/UX</span>
+                    </div>
+                </div>
+                
+                <div class="member-card">
+                    <div class="member-avatar">C</div>
+                    <div class="member-name">Lê Minh Cường</div>
+                    <div class="member-role">Backend Developer</div>
+                    <div class="member-skills">
+                        <span class="skill-tag">Firebase</span>
+                        <span class="skill-tag">Database</span>
+                        <span class="skill-tag">API</span>
+                    </div>
+                </div>
+                
+                <div class="member-card">
+                    <div class="member-avatar">D</div>
+                    <div class="member-name">Phạm Thu Dung</div>
+                    <div class="member-role">Project Manager & Tester</div>
+                    <div class="member-skills">
+                        <span class="skill-tag">Testing</span>
+                        <span class="skill-tag">Documentation</span>
+                        <span class="skill-tag">Management</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h2 class="control-title">🎛️ GPIO CONTROL PANEL</h2>
+            <div class="control-grid">
+                <div class="gpio-control">
+                    <div class="gpio-title">📡 GPIO 26</div>
+                    <div id="status26" class="gpio-status status-off">Trạng thái: TẮT</div>
+                    <div class="control-buttons">
+                        <button class="btn btn-on" onclick="controlGPIO(26, true)">🔛 BẬT</button>
+                        <button class="btn btn-off" onclick="controlGPIO(26, false)">🔴 TẮT</button>
+                    </div>
+                </div>
+                
+                <div class="gpio-control">
+                    <div class="gpio-title">💡 GPIO 27</div>
+                    <div id="status27" class="gpio-status status-off">Trạng thái: TẮT</div>
+                    <div class="control-buttons">
+                        <button class="btn btn-on" onclick="controlGPIO(27, true)">🔛 BẬT</button>
+                        <button class="btn btn-off" onclick="controlGPIO(27, false)">🔴 TẮT</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusIndicator" class="status-indicator">
+        <div id="statusMessage"></div>
+    </div>
+
+    <script>
+        // Thay bằng URL Firebase Realtime Database của bạn
+        const databaseURL = "https://iot-nhom-4-1bad5-default-rtdb.asia-southeast1.firebasedatabase.app/";
+
+        // Trạng thái hiện tại
+        let gpio26State = false;
+        let gpio27State = false;
+
+        function controlGPIO(pin, state) {
+            const endpoint = pin === 26 ? 'gpio26' : 'gpio27';
+            
+            fetch(`${databaseURL}/${endpoint}.json`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(state)
+            })
+            .then(response => {
+                if (response.ok) {
+                    updateStatus(pin, state);
+                    showStatusMessage(`GPIO ${pin} đã ${state ? 'BẬT' : 'TẮT'}`, state ? 'success' : 'error');
+                } else {
+                    showStatusMessage(`Lỗi khi điều khiển GPIO ${pin}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error("Lỗi:", error);
+                showStatusMessage(`Lỗi kết nối: ${error.message}`, 'error');
+            });
+        }
+
+        function updateStatus(pin, state) {
+            const statusElement = document.getElementById(`status${pin}`);
+            if (state) {
+                statusElement.textContent = "Trạng thái: BẬT";
+                statusElement.className = "gpio-status status-on";
+            } else {
+                statusElement.textContent = "Trạng thái: TẮT";
+                statusElement.className = "gpio-status status-off";
+            }
+            
+            if (pin === 26) gpio26State = state;
+            if (pin === 27) gpio27State = state;
+        }
+
+        function showStatusMessage(message, type) {
+            const indicator = document.getElementById('statusIndicator');
+            const messageElement = document.getElementById('statusMessage');
+            
+            messageElement.textContent = message;
+            indicator.className = `status-indicator show ${type}`;
+            
+            setTimeout(() => {
+                indicator.className = 'status-indicator';
+            }, 3000);
+        }
+
+        // Kiểm tra trạng thái từ Firebase khi tải trang
+        function checkStatus() {
+            fetch(`${databaseURL}/gpio26.json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data !== null) {
+                        updateStatus(26, data);
+                    }
+                })
+                .catch(error => console.error("Lỗi khi lấy trạng thái GPIO 26:", error));
+                
+            fetch(`${databaseURL}/gpio27.json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data !== null) {
+                        updateStatus(27, data);
+                    }
+                })
+                .catch(error => console.error("Lỗi khi lấy trạng thái GPIO 27:", error));
+        }
+
+        // Tự động kiểm tra trạng thái mỗi 5 giây
+        setInterval(checkStatus, 5000);
+        
+        // Kiểm tra trạng thái khi tải trang
+        window.addEventListener('load', checkStatus);
+    </script>
+</body>
+</html>
