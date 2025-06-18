@@ -8,12 +8,12 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f2f2f2;
       text-align: center;
-      padding-top: 100px;
+      padding-top: 50px;
     }
 
     h1 {
       color: #333;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
     }
 
     .btn {
@@ -47,11 +47,19 @@
     }
 
     .status {
-      margin-top: 30px;
+      margin-top: 20px;
       font-size: 20px;
       color: #555;
     }
+
+    canvas {
+      margin-top: 40px;
+      max-width: 90%;
+    }
   </style>
+
+  <!-- Thư viện Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h1>Điều khiển Đèn ESP32</h1>
@@ -59,24 +67,26 @@
   <button class="btn btn-on" onclick="controlLed(true)">💡 Bật đèn</button>
   <button class="btn btn-off" onclick="controlLed(false)">💤 Tắt đèn</button>
 
-   <button class="btn btn-on" onclick="cambien(true)"> Thủ Công</button>
-  <button class="btn btn-off" onclick="cambien(false)"> Tự động</button>
+  <button class="btn btn-on" onclick="cambien(true)">🔧 Thủ Công</button>
+  <button class="btn btn-off" onclick="cambien(false)">⚙️ Tự động</button>
+
   <div class="status" id="statusText">Trạng thái: Chưa cập nhật</div>
 
+  <canvas id="tempChart" width="400" height="200"></canvas>
+
   <script>
-    const databaseURL = "https://iot-nhom-4-1bad5-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    const databaseURL = "https://iot-nhom-4-1bad5-default-rtdb.asia-southeast1.firebasedatabase.app";
 
     function controlLed(state) {
       fetch(`${databaseURL}/gpio26.json`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state)
       })
       .then(response => {
         if (response.ok) {
-          document.getElementById("statusText").textContent = "Trạng thái: " + (state ? "Đèn đang BẬT" : "Đèn đã TẮT");
+          document.getElementById("statusText").textContent =
+            "Trạng thái: " + (state ? "Đèn đang BẬT" : "Đèn đã TẮT");
         } else {
           document.getElementById("statusText").textContent = "Trạng thái: Gửi yêu cầu thất bại.";
         }
@@ -86,17 +96,17 @@
         document.getElementById("statusText").textContent = "Trạng thái: Lỗi kết nối.";
       });
     }
+
     function cambien(state) {
       fetch(`${databaseURL}/mode.json`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state)
       })
       .then(response => {
         if (response.ok) {
-          document.getElementById("statusText").textContent = "Trạng thái: " + (state ? "Thủ Công" : "Tự động");
+          document.getElementById("statusText").textContent =
+            "Trạng thái: " + (state ? "Thủ Công" : "Tự động");
         } else {
           document.getElementById("statusText").textContent = "Trạng thái: Gửi yêu cầu thất bại.";
         }
@@ -106,6 +116,61 @@
         document.getElementById("statusText").textContent = "Trạng thái: Lỗi kết nối.";
       });
     }
+
+    
+    const ctx = document.getElementById('tempChart').getContext('2d');
+    const tempChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [], // thời gian
+        datasets: [{
+          label: 'Khoảng cách (cm)',
+          data: [],
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            title: { display: true, text: 'Thời gian' }
+          },
+          y: {
+            title: { display: true, text: 'cm' },
+            suggestedMin: 0,
+            suggestedMax: 50
+          }
+        }
+      }
+    });
+
+    // Lấy dữ liệu từ Firebase mỗi 2 giây
+    setInterval(() => {
+      fetch(`${databaseURL}/distance.json`)
+        .then(response => response.json())
+        .then(distance => {
+          const now = new Date();
+          const timeLabel = now.toLocaleTimeString();
+
+          if (typeof distance === 'number') {
+            tempChart.data.labels.push(timeLabel);
+            tempChart.data.datasets[0].data.push(distance);
+
+            if (tempChart.data.labels.length > 20) {
+              tempChart.data.labels.shift();
+              tempChart.data.datasets[0].data.shift();
+            }
+
+            tempChart.update();
+          }
+        })
+        .catch(error => {
+          console.error("Lỗi khi lấy dữ liệu temp:", error);
+        });
+    }, 2000); // mỗi 2 giây
   </script>
 </body>
 </html>
