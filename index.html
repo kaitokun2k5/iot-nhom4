@@ -67,7 +67,7 @@
     const databaseURL = "https://iot-nhom-4-1bad5-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
     function controlLed(state) {
-      fetch(`${databaseURL}/led.json`, {
+      fetch(`${databaseURL}/gpio26.json`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
