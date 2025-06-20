@@ -6,8 +6,8 @@
 #define WIFI_PASSWORD "182597463Qq"
                  
 // Thông tin Firebase
-#define FIREBASE_HOST "https://iot-nhom-4-1bad5-default-rtdb.asia-southeast1.firebasedatabase.app/"
-#define FIREBASE_AUTH "v7TLaQTenJHZCtkwdmn2rH75ElhFKsDuwFh5kIfD"  
+#define FIREBASE_HOST "https://turnonoffled-bf81e-default-rtdb.firebaseio.com/"
+#define FIREBASE_AUTH "1VqYC7q0Yg8lDy5jTDfyrRCtGaEE1XrlakdBIu4U"  
 
 FirebaseData fbdo;
 FirebaseAuth auth;
