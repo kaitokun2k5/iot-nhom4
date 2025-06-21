@@ -1,23 +1,32 @@
 #include <WiFi.h>
 #include <FirebaseESP32.h>
 #include "ld2410.h"
+#include <IRremote.hpp>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
+#include <SPI.h>
 // Thông tin WiFi
 #define WIFI_SSID "VNU-IS 208"
-#define WIFI_PASSWORD "182597463Qq"
-                 
+#define WIFI_PASSWORD "182597463Qq"          
 // Thông tin Firebase
 #define FIREBASE_HOST "https://turnonoffled-bf81e-default-rtdb.firebaseio.com/"
 #define FIREBASE_AUTH "1VqYC7q0Yg8lDy5jTDfyrRCtGaEE1XrlakdBIu4U"  
+
+#define TFT_CS     5
+#define TFT_RST    4
+#define TFT_DC     2
 
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 ld2410 radar;
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
-int ledPin = 27; 
-int led27 = 2; 
-bool ledStatus = false;
-bool mode = true;
+int ledPin = 27;
+int ledIR = 26;
+int Recv_Pin = 34;  
+String ledStatus = "false";
+String mode = "true";
 const int cambien = 19;
 bool radarConnected = false;
 unsigned long currentTime = millis();
@@ -29,23 +38,59 @@ void setup() {
   Serial.begin(115200);
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
-  pinMode(led27, OUTPUT);
+  pinMode(ledIR, OUTPUT);
+  digitalWrite(ledIR, LOW);
   pinMode(cambien, INPUT);
-  digitalWrite(led27, LOW);
-  Serial2.begin(256000, SERIAL_8N1, 16, 17);  
+  pinMode(LED_BUILTIN, OUTPUT);
 
+  tft.initR(INITR_BLACKTAB); // Khởi tạo với loại bảng ST7735 thông dụng
+  tft.setRotation(1);        // Xoay màn hình nếu cần (0-3)
+  tft.fillScreen(ST77XX_BLACK);         // Xóa màn hình
+  tft.setTextColor(ST77XX_WHITE);       // Màu chữ
+  tft.setTextSize(2);                   // Cỡ chữ
+  tft.setCursor(10, 30);                // Vị trí chữ
+  tft.println("Xin chao!");
+  tft.setCursor(10, 60);
+  tft.println("IoT Nhom 4");
+  delay(1000);
+  tft.fillScreen(ST77XX_BLACK);
+
+  Serial2.begin(256000, SERIAL_8N1, 16, 17);  
   if (radar.begin(Serial2)) {
     Serial.println("LD2410B khởi động thành công!");
+    tft.setCursor(1, 30);
+    tft.println("LD2410B khoi dong thanh cong!");delay(500);
+    tft.fillScreen(ST77XX_BLACK);
   } else {
     Serial.println("Không thể kết nối LD2410B!");
+    tft.setCursor(1, 30);
+    tft.println("Khong the ket noi LD2410B! Khoi dong lai sau 1s..");
+    delay(1000);
+    ESP.restart();
   }
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Đang kết nối Wi-Fi...");
+  Serial.print("Đang kết nối Wi-Fi");
+  tft.setCursor(10, 30);
+  tft.println("Dang ket noi Wifi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    for (int i = 0; i<3; i++) {
+      tft.setCursor(10, 60);
+      tft.print(".");
+    }
+    digitalWrite(LED_BUILTIN,HIGH);delay(300);  //đèn D2 báo trạng thái Wifi, nháy chậm khi chưa kết nối
+    digitalWrite(LED_BUILTIN,LOW);
   }
   Serial.println("Kết nối Wi-Fi thành công!");
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(1, 30);
+  tft.println("Ket noi thanh cong!!!");delay(500);
+  tft.fillScreen(ST77XX_BLACK);
+  digitalWrite(LED_BUILTIN,HIGH); delay(200);  // kết nối WIFI thành công, đèn chớp 2 lần
+  digitalWrite(LED_BUILTIN,LOW);delay(100);
+  digitalWrite(LED_BUILTIN,HIGH);delay(200);
+  digitalWrite(LED_BUILTIN,LOW);
 
   // Cấu hình Firebase
   config.host = FIREBASE_HOST;
@@ -53,84 +98,104 @@ void setup() {
 
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
+
+  IrReceiver.begin(Recv_Pin, true, 2); // True cho phép led nối với chân 2 nhấp nháy
+  IrSender.begin(Recv_Pin, true, 2); 
 }
+
 
 void loop() {
+  if (Firebase.getString(fbdo, "/mode")) {
+    mode = fbdo.stringData();
 
-if( Firebase.getBool(fbdo, "/mode")) {
-  mode = fbdo.boolData();
-  if (mode==true) {
-    if (Firebase.getBool(fbdo, "/gpio26")) {
-    ledStatus = fbdo.boolData();
-    digitalWrite(ledPin, ledStatus & mode ? HIGH : LOW);
-    Serial.println(ledStatus ? "Bật đèn" : "Tắt đèn");
-    
-  } else {
-    Serial.println("Lỗi đọc dữ liệu từ Firebase");
-    ESP.restart();
-  }
-  }
-  else {
-    radar.read();
-    if(radar.isConnected() && millis() - lastReading > 1000)  //Report every 1000ms
-    {
-    lastReading = millis();
-    if(radar.presenceDetected())
-    {
-      if(radar.stationaryTargetDetected())
-      {
-        //uint16_t stationary = radar.stationaryTargetDistance();
-        Serial.print(F("Stationary target: "));
-        Serial.print(radar.stationaryTargetDistance());
-        Serial.print(F("cm energy:"));
-        Serial.print(radar.stationaryTargetEnergy());
-        Serial.print(' ');
+    // Chế độ THỦ CÔNG (qua WiFi)
+    if (mode == "true") {
+      if (Firebase.getString(fbdo, "/gpio26")) {
+        ledStatus = fbdo.stringData();
+        if (ledStatus == "true") {
+          digitalWrite(ledPin, HIGH);
+          Serial.println("Đèn bật");
+        } else {
+          digitalWrite(ledPin, LOW);
+          Serial.println("Đèn tắt");
+        }
+      } else {
+        Serial.println("Lỗi đọc /gpio26 từ Firebase");
+        ESP.restart();
       }
     }
-      /*if(radar.movingTargetDetected())
-      {
-        Serial.print(F("Moving target: "));
-        Serial.print(radar.movingTargetDistance());
-        Serial.print(F("cm energy:"));
-        Serial.print(radar.movingTargetEnergy());
-      }*/
-      if (radar.movingTargetDetected()) {
-    uint16_t distance = radar.movingTargetDistance();  // Lưu giá trị khoảng cách
-    Serial.print(F("Moving target: "));
-    Serial.print(distance);
-    Serial.print(F("cm energy:"));
-    Serial.print(radar.movingTargetEnergy());
 
-    // Gửi lên Firebase node "/distance"
-    if (Firebase.setInt(fbdo, "/distance", distance)) {
-      Serial.println(" → Đã cập nhật Firebase");
-    } else {
-      Serial.print(" → Lỗi gửi Firebase: ");
-      Serial.println(fbdo.errorReason());
-    }
-  }
-      Serial.println();
-    }
-    else
-    {
-      Serial.println(F("No target"));
-    }
-  
-  
-  int i = digitalRead(cambien);
-  if (i!=0) {
-    digitalWrite(ledPin, HIGH);
-  }
-  else {
-    digitalWrite(ledPin, LOW);
-  }
-  delay(200);
-}
-}
+    // Chế độ TỰ ĐỘNG (radar)
+    else {
+      radar.read();
 
-else {
-    Serial.println("Lỗi đọc dữ liệu từ Firebase");
+      if (radar.isConnected() && millis() - lastReading > 1000) {
+        lastReading = millis();
+
+        if (radar.presenceDetected()) {
+          if (radar.stationaryTargetDetected()) {
+            Serial.print(F("Stationary target: "));
+            Serial.print(radar.stationaryTargetDistance());
+            Serial.print(F("cm energy:"));
+            Serial.print(radar.stationaryTargetEnergy());
+          }
+
+          if (radar.movingTargetDetected()) {
+            uint16_t distance = radar.movingTargetDistance();
+            Serial.print(F("\nMoving target: "));
+            Serial.print(distance);
+            Serial.print(F("cm energy:"));
+            Serial.print(radar.movingTargetEnergy());
+
+            if (Firebase.setInt(fbdo, "/distance", distance)) {
+              Serial.println(" → Đã cập nhật Firebase");
+            } else {
+              Serial.print(" → Lỗi gửi Firebase: ");
+              Serial.println(fbdo.errorReason());
+            }
+          }
+        } else {
+          Serial.println(F("No target"));
+        }
+
+        Serial.println();
+      }
+
+      int i = digitalRead(cambien);  // cảm biến khi phát hiện con người sẽ cho giá trị chân OUt (gán chân số 19) là 1
+      digitalWrite(ledPin, i != 0 ? HIGH : LOW);   // đảo ngược giá trị đọc được của ledIR (đèn tắt thì bật và ngược lại)
+
+      delay(2000);
+    }
+
+  } else {
+    Serial.println("Lỗi đọc /mode từ Firebase");
     ESP.restart();
-  } 
+  }
+
+  // ======== Xử lý Remote IR ========
+  if (IrReceiver.decode()) {
+    uint32_t dataRemote = IrReceiver.decodedIRData.decodedRawData;
+
+    if (dataRemote > 0) {
+      Serial.println(dataRemote);
+
+      if (millis() - currentTime > 250) {
+        switch (dataRemote) {
+          case 3125149440:           // mã code tùy nút và điều khiển
+            digitalWrite(ledIR, !digitalRead(ledIR)); 
+            break;
+          case 3091726080:
+            for (int i=0; i<5 ;i++) {
+              digitalWrite(ledIR, HIGH); delay(100);
+              digitalWrite(ledIR, LOW); delay(100);
+            }
+            break;
+        }
+      }
+
+      currentTime = millis();
+    }
+    IrReceiver.resume();
+  }
 }
 
