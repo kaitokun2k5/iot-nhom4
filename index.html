@@ -8,7 +8,7 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f2f2f2;
       text-align: center;
-      padding-top: 50px;
+      padding-top: 40px;
     }
 
     h1 {
@@ -47,9 +47,50 @@
     }
 
     .status {
+      margin-top: 10px;
+      font-size: 18px;
+      color: #444;
+    }
+
+    .time-section {
+      margin-top: 40px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      display: inline-block;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    select {
+      font-size: 16px;
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+    }
+
+    .schedule-btn {
       margin-top: 20px;
-      font-size: 20px;
-      color: #555;
+      background: #007bff;
+      color: white;
+    }
+
+    .schedule-btn:hover {
+      background: #0056b3;
+    }
+
+    .toggle-hengio {
+      background-color: #ffc107;
+      color: #000;
+    }
+
+    .toggle-hengio:hover {
+      background-color: #e0a800;
     }
 
     canvas {
@@ -57,8 +98,6 @@
       max-width: 90%;
     }
   </style>
-
-  <!-- Thư viện Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -67,12 +106,35 @@
   <button class="btn btn-on" onclick="controlLed(true)">💡 Bật đèn</button>
   <button class="btn btn-off" onclick="controlLed(false)">💤 Tắt đèn</button>
 
-  <button class="btn btn-on" onclick="cambien(true)">🔧 Thủ Công</button>
-  <button class="btn btn-off" onclick="cambien(false)">⚙️ Tự động</button>
+  <br>
+  <button class="btn btn-on" onclick="setMode(true)">🔧 Thủ Công</button>
+  <button class="btn btn-off" onclick="setMode(false)">⚙️ Tự động</button>
 
-  <div class="status" id="statusText">Trạng thái: Chưa cập nhật</div>
+  <br>
+  <button class="btn toggle-hengio" onclick="toggleHenGio()">⏰ Bật/Tắt Hẹn Giờ</button>
 
-  <canvas id="tempChart" width="400" height="200"></canvas>
+
+  <div class="status" id="statusMode">Chế độ: ...</div>
+  <div class="status" id="statusHenGio">Hẹn giờ: ...</div>
+
+  <!-- Chọn giờ bật/tắt -->
+  <div class="time-section">
+    <h2>Hẹn Giờ Bật / Tắt Đèn</h2>
+    <label>Giờ bật:</label>
+    <select id="hourOn"></select> :
+    <select id="minuteOn"></select>
+
+    <label>Giờ tắt:</label>
+    <select id="hourOff"></select> :
+    <select id="minuteOff"></select>
+
+    <button class="btn schedule-btn" onclick="sendSchedule()">📤 Gửi thời gian</button>
+
+    <div class="status" id="currentSchedule">⏰ Đang hẹn giờ: --:-- → --:--</div>
+  </div>
+
+  <!-- Biểu đồ -->
+  <canvas id="distanceChart" width="400" height="200"></canvas>
 
   <script>
     const databaseURL = "https://turnonoffled-bf81e-default-rtdb.firebaseio.com/";
@@ -80,49 +142,104 @@
     function controlLed(state) {
       fetch(`${databaseURL}/gpio26.json`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state)
-      })
-      .then(response => {
-        if (response.ok) {
-          document.getElementById("statusText").textContent =
-            "Trạng thái: " + (state ? "Đèn đang BẬT" : "Đèn đã TẮT");
-        } else {
-          document.getElementById("statusText").textContent = "Trạng thái: Gửi yêu cầu thất bại.";
-        }
-      })
-      .catch(error => {
-        console.error("Lỗi:", error);
-        document.getElementById("statusText").textContent = "Trạng thái: Lỗi kết nối.";
       });
     }
 
-    function cambien(state) {
+    function setMode(state) {
       fetch(`${databaseURL}/mode.json`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state)
-      })
-      .then(response => {
-        if (response.ok) {
-          document.getElementById("statusText").textContent =
-            "Trạng thái: " + (state ? "Thủ Công" : "Tự động");
-        } else {
-          document.getElementById("statusText").textContent = "Trạng thái: Gửi yêu cầu thất bại.";
-        }
-      })
-      .catch(error => {
-        console.error("Lỗi:", error);
-        document.getElementById("statusText").textContent = "Trạng thái: Lỗi kết nối.";
       });
     }
 
-    
-    const ctx = document.getElementById('tempChart').getContext('2d');
-    const tempChart = new Chart(ctx, {
+    function toggleHenGio() {
+      fetch(`${databaseURL}/hengio.json`)
+        .then(res => res.json())
+        .then(current => {
+          const newState = !current;
+          return fetch(`${databaseURL}/hengio.json`, {
+            method: "PUT",
+            body: JSON.stringify(newState)
+          });
+        });
+    }
+
+    function sendSchedule() {
+      const hourOn = parseInt(document.getElementById("hourOn").value);
+      const minuteOn = parseInt(document.getElementById("minuteOn").value);
+      const hourOff = parseInt(document.getElementById("hourOff").value);
+      const minuteOff = parseInt(document.getElementById("minuteOff").value);
+
+      fetch(`${databaseURL}/schedule.json`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hourOn, minuteOn, hourOff, minuteOff })
+      })
+      
+      .catch(() => {
+        alert("⚠️ Lỗi kết nối đến Firebase!");
+      });
+    }
+
+    function updateStatus() {
+      fetch(`${databaseURL}/gpio26.json`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("statusLed").textContent = "Đèn: " + (data ? "BẬT" : "TẮT");
+        });
+
+      fetch(`${databaseURL}/mode.json`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("statusMode").textContent = "Chế độ: " + (data ? "Thủ Công" : "Tự Động");
+        });
+
+      fetch(`${databaseURL}/hengio.json`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("statusHenGio").textContent = "Hẹn giờ: " + (data ? "ĐANG BẬT" : "ĐANG TẮT");
+        });
+    }
+
+    function updateScheduleDisplay() {
+      Promise.all([
+        fetch(`${databaseURL}/schedule/hourOn.json`).then(res => res.json()),
+        fetch(`${databaseURL}/schedule/minuteOn.json`).then(res => res.json()),
+        fetch(`${databaseURL}/schedule/hourOff.json`).then(res => res.json()),
+        fetch(`${databaseURL}/schedule/minuteOff.json`).then(res => res.json())
+      ]).then(([hourOn, minuteOn, hourOff, minuteOff]) => {
+        const formatted = `⏰ Đang hẹn giờ: ${formatTime(hourOn)}:${formatTime(minuteOn)} → ${formatTime(hourOff)}:${formatTime(minuteOff)}`;
+        document.getElementById("currentSchedule").textContent = formatted;
+      }).catch(() => {
+        document.getElementById("currentSchedule").textContent = "⏰ Không đọc được giờ hẹn.";
+      });
+    }
+
+    function formatTime(n) {
+      return n.toString().padStart(2, '0');
+    }
+
+    function populateSelect(id, max) {
+      const select = document.getElementById(id);
+      for (let i = 0; i <= max; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.text = i.toString().padStart(2, '0');
+        select.appendChild(option);
+      }
+    }
+
+    populateSelect("hourOn", 23);
+    populateSelect("minuteOn", 59);
+    populateSelect("hourOff", 23);
+    populateSelect("minuteOff", 59);
+
+    const ctx = document.getElementById('distanceChart').getContext('2d');
+    const distanceChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: [], // thời gian
+        labels: [],
         datasets: [{
           label: 'Khoảng cách (cm)',
           data: [],
@@ -141,36 +258,35 @@
           y: {
             title: { display: true, text: 'cm' },
             suggestedMin: 0,
-            suggestedMax: 50
+            suggestedMax: 100
           }
         }
       }
     });
 
-    // Lấy dữ liệu từ Firebase mỗi 2 giây
-    setInterval(() => {
+    function updateDistance() {
       fetch(`${databaseURL}/distance.json`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(distance => {
-          const now = new Date();
-          const timeLabel = now.toLocaleTimeString();
-
           if (typeof distance === 'number') {
-            tempChart.data.labels.push(timeLabel);
-            tempChart.data.datasets[0].data.push(distance);
-
-            if (tempChart.data.labels.length > 20) {
-              tempChart.data.labels.shift();
-              tempChart.data.datasets[0].data.shift();
+            const now = new Date().toLocaleTimeString();
+            distanceChart.data.labels.push(now);
+            distanceChart.data.datasets[0].data.push(distance);
+            if (distanceChart.data.labels.length > 20) {
+              distanceChart.data.labels.shift();
+              distanceChart.data.datasets[0].data.shift();
             }
-
-            tempChart.update();
+            distanceChart.update();
           }
-        })
-        .catch(error => {
-          console.error("Lỗi khi lấy dữ liệu temp:", error);
         });
-    }, 2000); // mỗi 2 giây
+    }
+
+    // Khởi chạy
+    updateStatus();
+    updateScheduleDisplay();
+    setInterval(updateStatus, 3000);
+    setInterval(updateScheduleDisplay, 3000);
+    setInterval(updateDistance, 2000);
   </script>
 </body>
 </html>
