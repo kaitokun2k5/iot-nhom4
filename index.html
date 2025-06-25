@@ -111,11 +111,12 @@
   <button class="btn btn-off" onclick="setMode(false)">⚙️ Tự động</button>
 
   <br>
-  <button class="btn toggle-hengio" onclick="toggleHenGio()">⏰ Bật/Tắt Hẹn Giờ</button>
-
+  <button class="btn toggle-hengio" onclick="toggleHenGio('bat')">⏰ Hẹn giờ BẬT</button>
+  <button class="btn toggle-hengio" onclick="toggleHenGio('tat')">🛌 Hẹn giờ TẮT</button>
 
   <div class="status" id="statusMode">Chế độ: ...</div>
-  <div class="status" id="statusHenGio">Hẹn giờ: ...</div>
+  <div class="status" id="statusHenGioBat">Hẹn giờ BẬT: ...</div>
+  <div class="status" id="statusHenGioTat">Hẹn giờ TẮT: ...</div>
 
   <!-- Chọn giờ bật/tắt -->
   <div class="time-section">
@@ -153,12 +154,13 @@
       });
     }
 
-    function toggleHenGio() {
-      fetch(`${databaseURL}/hengio.json`)
+    function toggleHenGio(type) {
+      const path = type === 'bat' ? 'hengiobat' : 'hengiotat';
+      fetch(`${databaseURL}/${path}.json`)
         .then(res => res.json())
         .then(current => {
           const newState = !current;
-          return fetch(`${databaseURL}/hengio.json`, {
+          return fetch(`${databaseURL}/${path}.json`, {
             method: "PUT",
             body: JSON.stringify(newState)
           });
@@ -175,30 +177,26 @@
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hourOn, minuteOn, hourOff, minuteOff })
-      })
-      
-      .catch(() => {
-        alert("⚠️ Lỗi kết nối đến Firebase!");
       });
     }
 
     function updateStatus() {
-      fetch(`${databaseURL}/gpio26.json`)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("statusLed").textContent = "Đèn: " + (data ? "BẬT" : "TẮT");
-        });
-
       fetch(`${databaseURL}/mode.json`)
         .then(res => res.json())
         .then(data => {
           document.getElementById("statusMode").textContent = "Chế độ: " + (data ? "Thủ Công" : "Tự Động");
         });
 
-      fetch(`${databaseURL}/hengio.json`)
+      fetch(`${databaseURL}/hengiobat.json`)
         .then(res => res.json())
         .then(data => {
-          document.getElementById("statusHenGio").textContent = "Hẹn giờ: " + (data ? "ĐANG BẬT" : "ĐANG TẮT");
+          document.getElementById("statusHenGioBat").textContent = "Hẹn giờ BẬT: " + (data ? "ĐANG BẬT" : "ĐANG TẮT");
+        });
+
+      fetch(`${databaseURL}/hengiotat.json`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("statusHenGioTat").textContent = "Hẹn giờ TẮT: " + (data ? "ĐANG BẬT" : "ĐANG TẮT");
         });
     }
 
@@ -252,9 +250,7 @@
       options: {
         responsive: true,
         scales: {
-          x: {
-            title: { display: true, text: 'Thời gian' }
-          },
+          x: { title: { display: true, text: 'Thời gian' }},
           y: {
             title: { display: true, text: 'cm' },
             suggestedMin: 0,
@@ -281,7 +277,6 @@
         });
     }
 
-    // Khởi chạy
     updateStatus();
     updateScheduleDisplay();
     setInterval(updateStatus, 3000);
