@@ -31,7 +31,8 @@ int ledIR = 26;
 int Recv_Pin = 34;  
 String ledStatus = "false";
 String mode = "true";
-String hengio = "false";
+String hengiobat = "false";
+String hengiotat = "false";
 const int cambien = 19;
 bool radarConnected = false;
 unsigned long currentTime = millis();
@@ -113,127 +114,129 @@ void setup() {
 
 void loop() {
     // --------------Hẹn giờ bật tắt------------ 
-  if (Firebase.getString(fbdo, "/hengio")) {
-    hengio = fbdo.stringData();
-    if (hengio == "true") {
-      if (ledhengio == 1) {
-        digitalWrite(ledPin, LOW);
-        ledhengio = 0;
+  if (Firebase.getString(fbdo, "/hengiobat")) {
+  hengiobat = fbdo.stringData();
+  }
+  if (Firebase.getString(fbdo, "/hengiotat")) {
+  hengiotat = fbdo.stringData();
+  }
+  if (hengiobat == "true" || hengiotat == "true" ) {
+
+    currentTime = millis();
+    if (currentTime - previousTime >= interval) { // 10 giây thực hiện kiểm tra giờ
+      previousTime = currentTime;
+
+      timeClient.update();
+      int currentHour = timeClient.getHours();
+      int currentMinute = timeClient.getMinutes();
+
+      // Đọc từ Firebase
+      if (Firebase.getInt(fbdo, "/schedule/hourOn")) {
+        hourOn = fbdo.intData();
       }
-      currentTime = millis();
-      if (currentTime - previousTime >= interval) { // Nếu đã đủ 30 giây, thì thực hiện kiểm tra giờ
-        previousTime = currentTime;
-
-        timeClient.update();
-        int currentHour = timeClient.getHours();
-        int currentMinute = timeClient.getMinutes();
-
-        // Đọc từ Firebase
-        if (Firebase.getInt(fbdo, "/schedule/hourOn")) {
-          hourOn = fbdo.intData();
-        }
-        if (Firebase.getInt(fbdo, "/schedule/minuteOn")) {
-          minuteOn = fbdo.intData();
-        }
-        if (Firebase.getInt(fbdo, "/schedule/hourOff")) {
-          hourOff = fbdo.intData();
-        }
-        if (Firebase.getInt(fbdo, "/schedule/minuteOff")) {
-          minuteOff = fbdo.intData();
-        }
-
-        // Debug
-        Serial.printf("Giờ hiện tại: %02d:%02d | BẬT: %02d:%02d | TẮT: %02d:%02d\n",
-          currentHour, currentMinute, hourOn, minuteOn, hourOff, minuteOff);
-
+      if (Firebase.getInt(fbdo, "/schedule/minuteOn")) {
+        minuteOn = fbdo.intData();
+      }
+      if (Firebase.getInt(fbdo, "/schedule/hourOff")) {
+        hourOff = fbdo.intData();
+      }
+      if (Firebase.getInt(fbdo, "/schedule/minuteOff")) {
+        minuteOff = fbdo.intData();
+      }        
+      // Debug
+      Serial.printf("Giờ hiện tại: %02d:%02d | BẬT: %02d:%02d | TẮT: %02d:%02d\n",
+        currentHour, currentMinute, hourOn, minuteOn, hourOff, minuteOff);
+      if (hengiobat == "true") {
         // So sánh thời gian
         if (currentHour == hourOn && currentMinute == minuteOn) {
           digitalWrite(ledPin, HIGH);
           Serial.println("💡 BẬT đèn theo lịch");
         }
-
+      }
+      if (hengiotat == "true") {
         if (currentHour == hourOff && currentMinute == minuteOff) {
-          digitalWrite(ledPin, LOW);
-          Serial.println("💤 TẮT đèn theo lịch");
+        digitalWrite(ledPin, LOW);
+        Serial.println("💤 TẮT đèn theo lịch");
         }
       }
-    } else {
-        if (Firebase.getString(fbdo, "/mode")) {  
-          mode = fbdo.stringData();
+      
+    }
+  }
+  else {
+    if (Firebase.getString(fbdo, "/mode")) {  
+      mode = fbdo.stringData();
 
-        // Chế độ THỦ CÔNG (qua WiFi)
-        if (mode == "true") {
-          if (Firebase.getString(fbdo, "/gpio26")) {
-            ledStatus = fbdo.stringData();
-            if (ledStatus == "true") {
-              digitalWrite(ledPin, HIGH);
-              ledhengio = 1;
-              Serial.println("Đèn bật");
-            } else {
-              digitalWrite(ledPin, LOW);
-              ledhengio = 0;
-              Serial.println("Đèn tắt");
-            }
-          } else {
-            Serial.println("Lỗi đọc /gpio26 từ Firebase");
-            ESP.restart();
-          }
+    // Chế độ THỦ CÔNG (qua WiFi)
+    if (mode == "true") {
+      if (Firebase.getString(fbdo, "/gpio26")) {
+        ledStatus = fbdo.stringData();
+        if (ledStatus == "true") {
+          digitalWrite(ledPin, HIGH);
+          ledhengio = 1;
+          Serial.println("Đèn bật");
+        } else {
+          digitalWrite(ledPin, LOW);
+          ledhengio = 0;
+          Serial.println("Đèn tắt");
         }
-
-        // Chế độ TỰ ĐỘNG (radar)
-        else {
-          radar.read();
-
-          if (radar.isConnected() && millis() - lastReading > 1000) {
-            lastReading = millis();
-
-            if (radar.presenceDetected()) {
-              if (radar.stationaryTargetDetected()) {
-                Serial.print(F("Stationary target: "));
-                Serial.print(radar.stationaryTargetDistance());
-                Serial.print(F("cm energy:"));
-                Serial.print(radar.stationaryTargetEnergy());
-              }
-
-              if (radar.movingTargetDetected()) {
-                uint16_t distance = radar.movingTargetDistance();
-                Serial.print(F("\nMoving target: "));
-                Serial.print(distance);
-                Serial.print(F("cm energy:"));
-                Serial.print(radar.movingTargetEnergy());
-
-                if (Firebase.setInt(fbdo, "/distance", distance)) {
-                  Serial.println(" → Đã cập nhật Firebase");
-                } else {
-                  Serial.print(" → Lỗi gửi Firebase: ");
-                  Serial.println(fbdo.errorReason());
-                }
-              }
-            } else {
-              Serial.println(F("No target"));
-            }
-
-            Serial.println();
-          }
-
-          int i = digitalRead(cambien);  // cảm biến khi phát hiện con người sẽ cho giá trị chân OUt (gán chân số 19) là 1
-          digitalWrite(ledPin, i != 0 ? HIGH : LOW);   // đảo ngược giá trị đọc được của ledIR (đèn tắt thì bật và ngược lại)
-          if (ledPin) {
-            ledhengio = 1;
-          } else {
-            ledhengio = 0;
-          }
-
-          delay(2000);
-        }
-
       } else {
-        Serial.println("Lỗi đọc /mode từ Firebase");
+        Serial.println("Lỗi đọc /gpio26 từ Firebase");
         ESP.restart();
       }
     }
+
+    // Chế độ TỰ ĐỘNG (radar)
+    else {
+      radar.read();
+
+      if (radar.isConnected() && millis() - lastReading > 1000) {
+        lastReading = millis();
+
+        if (radar.presenceDetected()) {
+          if (radar.stationaryTargetDetected()) {
+            Serial.print(F("Stationary target: "));
+            Serial.print(radar.stationaryTargetDistance());
+            Serial.print(F("cm energy:"));
+            Serial.print(radar.stationaryTargetEnergy());
+          }
+
+          if (radar.movingTargetDetected()) {
+            uint16_t distance = radar.movingTargetDistance();
+            Serial.print(F("\nMoving target: "));
+            Serial.print(distance);
+            Serial.print(F("cm energy:"));
+            Serial.print(radar.movingTargetEnergy());
+
+            if (Firebase.setInt(fbdo, "/distance", distance)) {
+              Serial.println(" → Đã cập nhật Firebase");
+            } else {
+              Serial.print(" → Lỗi gửi Firebase: ");
+              Serial.println(fbdo.errorReason());
+            }
+          }
+        } else {
+          Serial.println(F("No target"));
+        }
+
+        Serial.println();
+      }
+
+      int i = digitalRead(cambien);  // cảm biến khi phát hiện con người sẽ cho giá trị chân OUt (gán chân số 19) là 1
+      digitalWrite(ledPin, i != 0 ? HIGH : LOW);   // đảo ngược giá trị đọc được của ledIR (đèn tắt thì bật và ngược lại)
+      if (ledPin) {
+        ledhengio = 1;
+      } else {
+        ledhengio = 0;
+      }
+
+      delay(2000);
+    }
+
+  } else {
+    Serial.println("Lỗi đọc /mode từ Firebase");
+    ESP.restart();
+    }
   }
-  
 
   
 
