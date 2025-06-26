@@ -39,8 +39,8 @@ unsigned long currentTime = millis();
 unsigned long previousTime = 0; 
 const long timeoutTime = 2000;
 uint32_t lastReading = 0;
-int hourOn = 0, minuteOn = 0;
-int hourOff = 0, minuteOff = 0;
+String hourOn , minuteOn ;
+String hourOff , minuteOff ;
 const long interval = 10000; // 10 giây
 int ledhengio = 0;
 
@@ -131,30 +131,30 @@ void loop() {
       int currentMinute = timeClient.getMinutes();
 
       // Đọc từ Firebase
-      if (Firebase.getInt(fbdo, "/schedule/hourOn")) {
-        hourOn = fbdo.intData();
+      if (Firebase.getString(fbdo, "/schedule/hourOn")) {
+        hourOn = fbdo.stringData();
       }
-      if (Firebase.getInt(fbdo, "/schedule/minuteOn")) {
-        minuteOn = fbdo.intData();
+      if (Firebase.getString(fbdo, "/schedule/minuteOn")) {
+        minuteOn = fbdo.stringData();
       }
-      if (Firebase.getInt(fbdo, "/schedule/hourOff")) {
-        hourOff = fbdo.intData();
+      if (Firebase.getString(fbdo, "/schedule/hourOff")) {
+        hourOff = fbdo.stringData();
       }
-      if (Firebase.getInt(fbdo, "/schedule/minuteOff")) {
-        minuteOff = fbdo.intData();
+      if (Firebase.getString(fbdo, "/schedule/minuteOff")) {
+        minuteOff = fbdo.stringData();
       }        
       // Debug
       Serial.printf("Giờ hiện tại: %02d:%02d | BẬT: %02d:%02d | TẮT: %02d:%02d\n",
-        currentHour, currentMinute, hourOn, minuteOn, hourOff, minuteOff);
+        currentHour, currentMinute, hourOn.toInt(), minuteOn.toInt(), hourOff.toInt(), minuteOff.toInt());
       if (hengiobat == "true") {
         // So sánh thời gian
-        if (currentHour == hourOn && currentMinute == minuteOn) {
+        if (currentHour == hourOn.toInt() && currentMinute == minuteOn.toInt()) {
           digitalWrite(ledPin, HIGH);
           Serial.println("💡 BẬT đèn theo lịch");
         }
       }
       if (hengiotat == "true") {
-        if (currentHour == hourOff && currentMinute == minuteOff) {
+        if (currentHour == hourOff.toInt() && currentMinute == minuteOff.toInt()) {
         digitalWrite(ledPin, LOW);
         Serial.println("💤 TẮT đèn theo lịch");
         }
@@ -267,4 +267,3 @@ void loop() {
   }
 
 }
-
