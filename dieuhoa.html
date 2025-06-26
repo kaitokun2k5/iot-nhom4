@@ -62,7 +62,13 @@
     .btn-back:hover {
       background-color: #5a6268;
     }
+
+    canvas {
+      margin-top: 40px;
+      max-width: 90%;
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -77,15 +83,78 @@
   <br><br>
   <button class="btn btn-back" onclick="goBack()">🔙 Quay lại trang trước</button>
 
+  <!-- Biểu đồ nhiệt độ -->
+  <canvas id="tempChart" width="300" height="150"></canvas>
+
   <script>
+    const databaseURL = "https://turnonoffled-bf81e-default-rtdb.firebaseio.com/";
+
     function controlAC(action) {
-      alert("Đã chọn: " + action);
-      // Gửi lệnh điều khiển điều hòa tại đây
+      let path = "";
+      switch(action) {
+        case 'on': path = 'airStatus'; break;
+        case 'off': path = 'airStatus'; break;
+        case 'up': path = 'tangnhiet'; break;
+        case 'down': path = 'giamnhiet'; break;
+      }
+      let value = (action === 'off' || action === 'down') ? "false" : "true";
+
+      fetch(`${databaseURL}/${path}.json`, {
+        method: "PUT",
+        body: JSON.stringify(value)
+      });
     }
 
     function goBack() {
-      window.history.back(); // Quay lại trang trước đó
+      window.history.back();
     }
+
+    // Vẽ biểu đồ nhiệt độ
+    const ctx = document.getElementById('tempChart').getContext('2d');
+    const tempChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Nhiệt độ (°C)',
+          data: [],
+          borderColor: 'rgba(255, 159, 64, 1)',
+          backgroundColor: 'rgba(255, 159, 64, 0.2)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: 'Thời gian' }},
+          y: {
+            title: { display: true, text: '°C' },
+            suggestedMin: 0,
+            suggestedMax: 50
+          }
+        }
+      }
+    });
+
+    function updateTemperature() {
+      fetch(`${databaseURL}/nhietdo.json`)
+        .then(res => res.json())
+        .then(temp => {
+          if (typeof temp === 'number') {
+            const now = new Date().toLocaleTimeString();
+            tempChart.data.labels.push(now);
+            tempChart.data.datasets[0].data.push(temp);
+            if (tempChart.data.labels.length > 20) {
+              tempChart.data.labels.shift();
+              tempChart.data.datasets[0].data.shift();
+            }
+            tempChart.update();
+          }
+        });
+    }
+
+    setInterval(updateTemperature, 3000);
   </script>
 
 </body>
