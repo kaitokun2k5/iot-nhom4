@@ -42,7 +42,10 @@ uint32_t lastReading = 0;
 String hourOn , minuteOn ;
 String hourOff , minuteOff ;
 const long interval = 10000; // 10 giây
-int ledhengio = 0;
+String airStatus;
+int sensorPin = 32;// chân kết nối tới cảm biến LM35
+unsigned long currentTimeTemp = millis();
+unsigned long previousTimeTemp = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -113,6 +116,7 @@ void setup() {
 
 
 void loop() {
+  
     // --------------Hẹn giờ bật tắt------------ 
   if (Firebase.getString(fbdo, "/hengiobat")) {
   hengiobat = fbdo.stringData();
@@ -171,12 +175,10 @@ void loop() {
       if (Firebase.getString(fbdo, "/gpio26")) {
         ledStatus = fbdo.stringData();
         if (ledStatus == "true") {
-          digitalWrite(ledPin, HIGH);
-          ledhengio = 1;
+          digitalWrite(ledPin, HIGH);          
           Serial.println("Đèn bật");
         } else {
-          digitalWrite(ledPin, LOW);
-          ledhengio = 0;
+          digitalWrite(ledPin, LOW);          
           Serial.println("Đèn tắt");
         }
       } else {
@@ -192,21 +194,23 @@ void loop() {
       if (radar.isConnected() && millis() - lastReading > 1000) {
         lastReading = millis();
 
-        if (radar.presenceDetected()) {
+        if (radar.presenceDetected()) {          
           if (radar.stationaryTargetDetected()) {
+            uint16_t stationary = radar.stationaryTargetDistance();
             Serial.print(F("Stationary target: "));
-            Serial.print(radar.stationaryTargetDistance());
-            Serial.print(F("cm energy:"));
-            Serial.print(radar.stationaryTargetEnergy());
+            Serial.print(stationary);
+            if (Firebase.setInt(fbdo, "/stationary", stationary)) {
+              Serial.println(" → Đã cập nhật Firebase");
+            } else {
+              Serial.print(" → Lỗi gửi stationary Firebase: ");
+              Serial.println(fbdo.errorReason());
+            }
           }
 
           if (radar.movingTargetDetected()) {
             uint16_t distance = radar.movingTargetDistance();
             Serial.print(F("\nMoving target: "));
             Serial.print(distance);
-            Serial.print(F("cm energy:"));
-            Serial.print(radar.movingTargetEnergy());
-
             if (Firebase.setInt(fbdo, "/distance", distance)) {
               Serial.println(" → Đã cập nhật Firebase");
             } else {
@@ -223,12 +227,6 @@ void loop() {
 
       int i = digitalRead(cambien);  // cảm biến khi phát hiện con người sẽ cho giá trị chân OUt (gán chân số 19) là 1
       digitalWrite(ledPin, i != 0 ? HIGH : LOW);   // đảo ngược giá trị đọc được của ledIR (đèn tắt thì bật và ngược lại)
-      if (ledPin) {
-        ledhengio = 1;
-      } else {
-        ledhengio = 0;
-      }
-
       delay(2000);
     }
 
@@ -240,7 +238,28 @@ void loop() {
 
   
 
-  // ======== Xử lý Remote IR ========
+  // ======== Xử lý Remote IR, điều hòa ========
+  if (millis() - previousTimeTemp >= 3000) {
+  previousTimeTemp = millis();  // Cập nhật thời gian
+
+  if (Firebase.getString(fbdo, "/airStatus")) {
+    airStatus = fbdo.stringData();
+    if (airStatus == "true") {
+      Serial.println("💡 Điều hòa ĐANG BẬT");
+      IrSender.sendNEC(1344276489, 32);
+    } else if (airStatus == "false") {
+      Serial.println("💤 Điều hòa ĐANG TẮT");
+      IrSender.sendNEC(1344276489, 32);
+    }
+  } else {
+    Serial.print("❌ Lỗi đọc Firebase (/airStatus): ");
+    Serial.println(fbdo.errorReason());
+  }
+}
+
+
+
+/*
   if (IrReceiver.decode()) {
     uint32_t dataRemote = IrReceiver.decodedIRData.decodedRawData;
 
@@ -264,6 +283,21 @@ void loop() {
       currentTime = millis();
     }
     IrReceiver.resume();
-  }
+  }*/
 
+  // LM35
+  
+  if (millis() - currentTimeTemp > 3000) {
+    currentTimeTemp = millis();  
+    int reading = analogRead(sensorPin);  
+  float voltage = reading * 5.0 / 4059.0; //tính ra giá trị hiệu điện thế (đơn vị Volt) từ giá trị cảm biến
+  int temp = voltage * 100.0;
+  Serial.print(temp);
+  if (Firebase.setInt(fbdo, "/nhietdo", temp)) {
+    Serial.println(" → Đã cập nhật Firebase");
+  } else {
+    Serial.print(" → Lỗi gửi nhietdo Firebase: ");
+    Serial.println(fbdo.errorReason());
+    }
+  }
 }
