@@ -24,7 +24,7 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background 0.3s ease, transform 0.2s ease;
-	text-decoration: none;
+      text-decoration: none;
     }
 
     .btn-on {
@@ -95,8 +95,9 @@
     }
 
     canvas {
-      margin-top: 40px;
-      max-width: 90%;
+      margin-top: 30px;
+  	max-width: 90%;
+  	height: auto;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -105,16 +106,16 @@
   <h1>Điều khiển Đèn ESP32</h1>
 
   <a href="dieuhoa.html" class="btn btn-on">🌬️ Điều khiển điều hòa</a>
-	<br>
-  <br>
+  <br><br>
+
   <button class="btn btn-on" onclick="controlLed(true)">💡 Bật đèn</button>
   <button class="btn btn-off" onclick="controlLed(false)">💤 Tắt đèn</button>
-
   <br>
+
   <button class="btn btn-on" onclick="setMode(true)">🔧 Thủ Công</button>
   <button class="btn btn-off" onclick="setMode(false)">⚙️ Tự động</button>
-
   <br>
+
   <button class="btn toggle-hengio" onclick="toggleHenGio('bat')">⏰ Hẹn giờ BẬT</button>
   <button class="btn toggle-hengio" onclick="toggleHenGio('tat')">🛌 Hẹn giờ TẮT</button>
 
@@ -122,7 +123,6 @@
   <div class="status" id="statusHenGioBat">Hẹn giờ BẬT: ...</div>
   <div class="status" id="statusHenGioTat">Hẹn giờ TẮT: ...</div>
 
-  <!-- Chọn giờ bật/tắt -->
   <div class="time-section">
     <h2>Hẹn Giờ Bật / Tắt Đèn</h2>
     <label>Giờ bật:</label>
@@ -138,8 +138,11 @@
     <div class="status" id="currentSchedule">⏰ Đang hẹn giờ: --:-- → --:--</div>
   </div>
 
-  <!-- Biểu đồ -->
+  <!-- Biểu đồ khoảng cách -->
   <canvas id="distanceChart" width="400" height="200"></canvas>
+
+  <!-- Biểu đồ năng lượng đứng yên -->
+  <canvas id="stationaryChart" width="400" height="200"></canvas>
 
   <script>
     const databaseURL = "https://turnonoffled-bf81e-default-rtdb.firebaseio.com/";
@@ -264,6 +267,33 @@
       }
     });
 
+    const ctx2 = document.getElementById('stationaryChart').getContext('2d');
+    const stationaryChart = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Năng lượng đứng yên',
+          data: [],
+          borderColor: 'rgba(54, 162, 235, 1)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: 'Thời gian' }},
+          y: {
+            title: { display: true, text: 'Giá trị' },
+            suggestedMin: 0,
+            suggestedMax: 100
+          }
+        }
+      }
+    });
+
     function updateDistance() {
       fetch(`${databaseURL}/distance.json`)
         .then(res => res.json())
@@ -281,11 +311,29 @@
         });
     }
 
+    function updateStationary() {
+      fetch(`${databaseURL}/stationary.json`)
+        .then(res => res.json())
+        .then(value => {
+          if (typeof value === 'number') {
+            const now = new Date().toLocaleTimeString();
+            stationaryChart.data.labels.push(now);
+            stationaryChart.data.datasets[0].data.push(value);
+            if (stationaryChart.data.labels.length > 20) {
+              stationaryChart.data.labels.shift();
+              stationaryChart.data.datasets[0].data.shift();
+            }
+            stationaryChart.update();
+          }
+        });
+    }
+
     updateStatus();
     updateScheduleDisplay();
     setInterval(updateStatus, 3000);
     setInterval(updateScheduleDisplay, 3000);
     setInterval(updateDistance, 2000);
+    setInterval(updateStationary, 2000);
   </script>
 </body>
 </html>
