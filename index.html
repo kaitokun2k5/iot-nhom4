@@ -159,7 +159,7 @@
       fetch(`${databaseURL}/${path}.json`)
         .then(res => res.json())
         .then(current => {
-          const newState = !current;
+          let newState = (current === "true") ? "false" : "true";
           return fetch(`${databaseURL}/${path}.json`, {
             method: "PUT",
             body: JSON.stringify(newState)
@@ -190,13 +190,13 @@
       fetch(`${databaseURL}/hengiobat.json`)
         .then(res => res.json())
         .then(data => {
-          document.getElementById("statusHenGioBat").textContent = "Hẹn giờ BẬT: " + (data ? "ĐANG BẬT" : "ĐANG TẮT");
+          document.getElementById("statusHenGioBat").textContent = "Hẹn giờ BẬT: " + (data === "true" ? "ĐANG BẬT" : "ĐANG TẮT");
         });
 
       fetch(`${databaseURL}/hengiotat.json`)
         .then(res => res.json())
         .then(data => {
-          document.getElementById("statusHenGioTat").textContent = "Hẹn giờ TẮT: " + (data ? "ĐANG BẬT" : "ĐANG TẮT");
+          document.getElementById("statusHenGioTat").textContent = "Hẹn giờ TẮT: " + (data === "true" ? "ĐANG BẬT" : "ĐANG TẮT");
         });
     }
 
