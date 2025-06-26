@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Điều khiển điều hòa</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f2f2f2;
+      text-align: center;
+      padding-top: 50px;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      font-size: 20px;
+      padding: 14px 40px;
+      margin: 12px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+    }
+
+    .btn-on {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .btn-off {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .btn-up {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-down {
+      background-color: #ffc107;
+      color: black;
+    }
+
+    .btn-back {
+      background-color: #6c757d;
+      color: white;
+      margin-top: 30px;
+    }
+
+    .btn-back:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Điều khiển điều hòa</h1>
+
+  <button class="btn btn-on" onclick="controlAC('on')">🔛 Bật điều hòa</button>
+  <button class="btn btn-off" onclick="controlAC('off')">⏹️ Tắt điều hòa</button>
+  <br>
+  <button class="btn btn-up" onclick="controlAC('up')">🔼 Tăng nhiệt độ</button>
+  <button class="btn btn-down" onclick="controlAC('down')">🔽 Giảm nhiệt độ</button>
+
+  <br><br>
+  <button class="btn btn-back" onclick="goBack()">🔙 Quay lại trang trước</button>
+
+  <script>
+    function controlAC(action) {
+      alert("Đã chọn: " + action);
+      // Gửi lệnh điều khiển điều hòa tại đây
+    }
+
+    function goBack() {
+      window.history.back(); // Quay lại trang trước đó
+    }
+  </script>
+
+</body>
+</html>
