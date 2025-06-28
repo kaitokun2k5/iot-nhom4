@@ -4,6 +4,7 @@ https://kaitokun2k5.github.io/iot-nhom4/
 
 Sơ đồ đấu nối
 
-![image](https://github.com/user-attachments/assets/33fb4ca5-438e-46fc-ac6b-8f58fe03be53)
+![image](https://github.com/user-attachments/assets/4717a80c-ca2e-4b41-a98a-fe3d1c46bd86)
+
 
 
