@@ -107,7 +107,7 @@ void setup() {
   pinMode(cambien, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
-  powerOnSimModule();
+  powerOnSimModule(); // khởi động Module SIM
 
   sendAT("AT");
   sendAT("AT+CMGF=1");       // Chế độ text
