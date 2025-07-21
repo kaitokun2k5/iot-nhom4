@@ -335,5 +335,23 @@
     setInterval(updateDistance, 2000);
     setInterval(updateStationary, 2000);
   </script>
+  <!-- Nhạc nền -->
+<audio id="backgroundMusic" autoplay loop>
+  <source src="https://cf-hls-media.sndcdn.com/playlist/IjK7UtVQ6Jsa.128.mp3/playlist.m3u8?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiKjovL2NmLWhscy1tZWRpYS5zbmRjZG4uY29tL3BsYXlsaXN0L0lqSzdVdFZRNkpzYS4xMjgubXAzL3BsYXlsaXN0Lm0zdTgqIiwiQ29uZGl0aW9uIjp7IkRhdGVMZXNzVGhhbiI6eyJBV1M6RXBvY2hUaW1lIjoxNzUzMDg0NTUzfX19XX0_&Signature=RxLL0V5~HKvl21qOcOHFOYqG8Bf8uQ2TpdeusGOVleqk2zJYloY7eLqnQBW2QnPxRcnEhun-WbUIhcu8SCnI5uYRW5qBmVzLKiPSt5K5FRQT31HB1e2xmnWhaCGQzejquXC0qK-G3v5kpkLGL1boke9MYVRDoi3DJX40oDhBt2~zzfWWfUzhRG8N5NtbRUTGeReBzkecQC~uEIiUcSryDXii-SIycztU4fGWUJECFXbllipVsSRiuGCziU3FKzWKhTxRtAFalGDKvU3vY7U7q56PxwQdVvmrYXmm8JhBLm6RnFPvqkf6n1-eTxSZLS0L0x6~YAAe6svc3qGXF8Mulg__&Key-Pair-Id=APKAI6TU7MMXM5DG6EPQ" type="audio/mpeg">
+
+</audio>
+
+<script>
+  // Bắt buộc người dùng tương tác để phát nhạc do hạn chế của trình duyệt
+  document.addEventListener('click', function () {
+    const audio = document.getElementById('backgroundMusic');
+    if (audio.paused) {
+      audio.play().catch(() => {
+        console.warn('Trình duyệt chặn tự phát nhạc.');
+      });
+    }
+  }, { once: true });
+</script>
+
 </body>
 </html>
