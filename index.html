@@ -144,12 +144,6 @@
   <!-- Biểu đồ năng lượng đứng yên -->
   <canvas id="stationaryChart" width="400" height="200"></canvas>
 
-  <!-- Nhạc nền -->
-  <audio id="backgroundMusic" autoplay loop>
-    <source src="iot-nhom4/Akuma No Ko EMOTIONAL ORCHESTRAL VERSION.mp3" type="audio/mpeg">
-    Trình duyệt của bạn không hỗ trợ âm thanh.
-  </audio>
-
   <script>
     const databaseURL = "https://turnonoffled-bf81e-default-rtdb.firebaseio.com/";
 
@@ -341,15 +335,7 @@
     setInterval(updateDistance, 2000);
     setInterval(updateStationary, 2000);
 
-    // Tự phát nhạc sau tương tác đầu tiên (vượt giới hạn của trình duyệt)
-    document.addEventListener('click', function () {
-      const audio = document.getElementById('backgroundMusic');
-      if (audio.paused) {
-        audio.play().catch(() => {
-          console.warn('Trình duyệt chặn tự phát nhạc.');
-        });
-      }
-    }, { once: true });
+
   </script>
 </body>
 </html>
